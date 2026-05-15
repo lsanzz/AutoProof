@@ -1,0 +1,61 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import { useState } from "react";
+import { formatDateTime } from "@/lib/utils";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Link } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/_authenticated/historico")({
+  component: HistoryPage,
+});
+
+function HistoryPage() {
+  const [q, setQ] = useState("");
+  const list = useQuery({
+    queryKey: ["history", q],
+    queryFn: async () => {
+      let qb = supabase
+        .from("inspections")
+        .select(`id, unique_code, status, entry_datetime,
+                 vehicle:vehicles(plate, model, brand), client:clients(name)`)
+        .order("created_at", { ascending: false });
+      if (q) qb = qb.or(`unique_code.ilike.%${q}%`);
+      const { data } = await qb;
+      return data ?? [];
+    },
+  });
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-display text-2xl font-bold">Histórico</h1>
+        <p className="text-sm text-muted-foreground">Consulte vistorias antigas</p>
+      </div>
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input className="pl-9" placeholder="Buscar..." value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      <div className="overflow-hidden rounded-xl border bg-card shadow-card">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+            <tr><th className="px-4 py-3">Código</th><th className="px-4 py-3">Veículo</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3 hidden md:table-cell">Data</th><th className="px-4 py-3">Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            {(list.data ?? []).map((r: any) => (
+              <tr key={r.id} className="border-t hover:bg-muted/30">
+                <td className="px-4 py-3 font-mono text-xs">{r.unique_code}</td>
+                <td className="px-4 py-3">{r.vehicle?.plate} <span className="text-muted-foreground">{r.vehicle?.model}</span></td>
+                <td className="px-4 py-3">{r.client?.name}</td>
+                <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">{formatDateTime(r.entry_datetime)}</td>
+                <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                <td className="px-4 py-3 text-right"><Link to="/vistorias/$id" params={{ id: r.id }} className="text-primary hover:underline">Abrir</Link></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

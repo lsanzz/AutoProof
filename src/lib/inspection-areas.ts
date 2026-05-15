@@ -1,0 +1,45 @@
+export const VEHICLE_AREAS = [
+  "Frente",
+  "Traseira",
+  "Lateral esquerda",
+  "Lateral direita",
+  "Capô",
+  "Teto",
+  "Porta-malas",
+  "Rodas",
+  "Faróis",
+  "Lanternas",
+  "Vidros",
+  "Interior",
+  "Painel",
+  "Bancos",
+] as const;
+
+export const DAMAGE_TYPES: { value: string; label: string }[] = [
+  { value: "risco", label: "Risco" },
+  { value: "amassado", label: "Amassado" },
+  { value: "ralado", label: "Ralado" },
+  { value: "trinca", label: "Trinca" },
+  { value: "peca_quebrada", label: "Peça quebrada" },
+  { value: "peca_faltando", label: "Peça faltando" },
+  { value: "mancha", label: "Mancha" },
+  { value: "vidro_trincado", label: "Vidro trincado" },
+  { value: "roda_arranhada", label: "Roda arranhada" },
+  { value: "farol_danificado", label: "Farol danificado" },
+  { value: "outro", label: "Outro" },
+];
+
+export const SERVICE_TYPES = [
+  "Revisão",
+  "Troca de óleo",
+  "Funilaria",
+  "Pintura",
+  "Martelinho de ouro",
+  "Estética automotiva",
+  "Lavagem",
+  "Polimento",
+  "Higienização interna",
+  "Mecânica geral",
+  "Elétrica",
+  "Outro",
+];
