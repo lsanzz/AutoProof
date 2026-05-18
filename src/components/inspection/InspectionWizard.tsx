@@ -6,7 +6,13 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Check, ChevronRight, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { generateInspectionCode, cn } from "@/lib/utils";
@@ -44,6 +50,7 @@ export function InspectionWizard() {
 
   const [areas, setAreas] = useState<Record<string, AreaState>>(() => {
     const obj: Record<string, AreaState> = {};
+
     VEHICLE_AREAS.forEach((area) => {
       obj[area] = {
         hasDamage: false,
@@ -52,6 +59,7 @@ export function InspectionWizard() {
         damages: [],
       };
     });
+
     return obj;
   });
 
@@ -87,8 +95,13 @@ export function InspectionWizard() {
     },
   });
 
-  const next = () => setStep((current) => Math.min(current + 1, STEPS.length - 1));
-  const prev = () => setStep((current) => Math.max(current - 1, 0));
+  const next = () => {
+    setStep((current) => Math.min(current + 1, STEPS.length - 1));
+  };
+
+  const prev = () => {
+    setStep((current) => Math.max(current - 1, 0));
+  };
 
   const finalize = async () => {
     if (!user) {
@@ -202,7 +215,12 @@ export function InspectionWizard() {
       for (const areaName of Object.keys(areas)) {
         const area = areas[areaName];
 
-        if (!area.hasDamage && area.photos.length === 0 && !area.notes && area.damages.length === 0) {
+        if (
+          !area.hasDamage &&
+          area.photos.length === 0 &&
+          !area.notes &&
+          area.damages.length === 0
+        ) {
           continue;
         }
 
@@ -289,7 +307,7 @@ export function InspectionWizard() {
             key={stepName}
             className={cn(
               "h-1.5 flex-1 rounded-full",
-              index <= step ? "bg-gradient-hero" : "bg-muted"
+              index <= step ? "bg-gradient-hero" : "bg-muted",
             )}
           />
         ))}
@@ -317,7 +335,7 @@ export function InspectionWizard() {
                 }}
                 className={cn(
                   "w-full rounded-lg border p-3 text-left hover:bg-muted/50",
-                  clientId === client.id && "border-primary bg-primary/5"
+                  clientId === client.id && "border-primary bg-primary/5",
                 )}
               >
                 <div className="font-medium">{client.name}</div>
@@ -328,7 +346,9 @@ export function InspectionWizard() {
             ))}
 
             <div className="rounded-lg border border-dashed p-4">
-              <div className="mb-3 text-sm font-medium">Ou cadastre novo cliente</div>
+              <div className="mb-3 text-sm font-medium">
+                Ou cadastre novo cliente
+              </div>
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
@@ -346,7 +366,9 @@ export function InspectionWizard() {
                   <Label>Telefone</Label>
                   <Input
                     value={newClient.phone}
-                    onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                    onChange={(e) =>
+                      setNewClient({ ...newClient, phone: e.target.value })
+                    }
                   />
                 </div>
 
@@ -354,7 +376,9 @@ export function InspectionWizard() {
                   <Label>E-mail</Label>
                   <Input
                     value={newClient.email}
-                    onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                    onChange={(e) =>
+                      setNewClient({ ...newClient, email: e.target.value })
+                    }
                   />
                 </div>
 
@@ -363,7 +387,10 @@ export function InspectionWizard() {
                   <Input
                     value={newClient.document_number}
                     onChange={(e) =>
-                      setNewClient({ ...newClient, document_number: e.target.value })
+                      setNewClient({
+                        ...newClient,
+                        document_number: e.target.value,
+                      })
                     }
                   />
                 </div>
@@ -392,7 +419,7 @@ export function InspectionWizard() {
                 }}
                 className={cn(
                   "w-full rounded-lg border p-3 text-left hover:bg-muted/50",
-                  vehicleId === vehicle.id && "border-primary bg-primary/5"
+                  vehicleId === vehicle.id && "border-primary bg-primary/5",
                 )}
               >
                 <div className="font-mono font-bold">{vehicle.plate}</div>
@@ -403,7 +430,9 @@ export function InspectionWizard() {
             ))}
 
             <div className="rounded-lg border border-dashed p-4">
-              <div className="mb-3 text-sm font-medium">Ou cadastre novo veículo</div>
+              <div className="mb-3 text-sm font-medium">
+                Ou cadastre novo veículo
+              </div>
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
@@ -424,7 +453,9 @@ export function InspectionWizard() {
                   <Label>Marca</Label>
                   <Input
                     value={newVehicle.brand}
-                    onChange={(e) => setNewVehicle({ ...newVehicle, brand: e.target.value })}
+                    onChange={(e) =>
+                      setNewVehicle({ ...newVehicle, brand: e.target.value })
+                    }
                   />
                 </div>
 
@@ -432,7 +463,9 @@ export function InspectionWizard() {
                   <Label>Modelo</Label>
                   <Input
                     value={newVehicle.model}
-                    onChange={(e) => setNewVehicle({ ...newVehicle, model: e.target.value })}
+                    onChange={(e) =>
+                      setNewVehicle({ ...newVehicle, model: e.target.value })
+                    }
                   />
                 </div>
 
@@ -440,7 +473,9 @@ export function InspectionWizard() {
                   <Label>Ano</Label>
                   <Input
                     value={newVehicle.year}
-                    onChange={(e) => setNewVehicle({ ...newVehicle, year: e.target.value })}
+                    onChange={(e) =>
+                      setNewVehicle({ ...newVehicle, year: e.target.value })
+                    }
                   />
                 </div>
 
@@ -448,7 +483,9 @@ export function InspectionWizard() {
                   <Label>Cor</Label>
                   <Input
                     value={newVehicle.color}
-                    onChange={(e) => setNewVehicle({ ...newVehicle, color: e.target.value })}
+                    onChange={(e) =>
+                      setNewVehicle({ ...newVehicle, color: e.target.value })
+                    }
                   />
                 </div>
 
@@ -457,7 +494,10 @@ export function InspectionWizard() {
                   <Input
                     value={newVehicle.mileage}
                     onChange={(e) =>
-                      setNewVehicle({ ...newVehicle, mileage: e.target.value })
+                      setNewVehicle({
+                        ...newVehicle,
+                        mileage: e.target.value,
+                      })
                     }
                   />
                 </div>
@@ -468,7 +508,9 @@ export function InspectionWizard() {
 
         {step === 2 && (
           <div className="space-y-4">
-            <h2 className="font-display text-lg font-semibold">Tipo de serviço</h2>
+            <h2 className="font-display text-lg font-semibold">
+              Tipo de serviço
+            </h2>
 
             <Select value={serviceType} onValueChange={setServiceType}>
               <SelectTrigger>
@@ -489,7 +531,7 @@ export function InspectionWizard() {
           <AreaInspector
             areas={areas}
             onChange={setAreas}
-            workshopId={workshopIdFromProfile(profile)}
+            workshopId={profile?.workshop_id ?? ""}
           />
         )}
 
@@ -508,18 +550,22 @@ export function InspectionWizard() {
 
               <ul className="mt-1 list-inside list-disc space-y-1">
                 {Object.entries(areas)
-                  .filter(([, area]) => area.hasDamage || area.damages.length > 0)
+                  .filter(
+                    ([, area]) => area.hasDamage || area.damages.length > 0,
+                  )
                   .map(([name, area]) => (
                     <li key={name}>
                       {name} — {area.damages.length} dano(s) registrado(s){" "}
                       {area.notes && (
-                        <span className="text-muted-foreground">({area.notes})</span>
+                        <span className="text-muted-foreground">
+                          ({area.notes})
+                        </span>
                       )}
                     </li>
                   ))}
 
                 {Object.values(areas).every(
-                  (area) => !area.hasDamage && area.damages.length === 0
+                  (area) => !area.hasDamage && area.damages.length === 0,
                 ) && (
                   <li className="list-none text-muted-foreground">
                     Nenhum dano registrado
@@ -531,15 +577,21 @@ export function InspectionWizard() {
                 <strong>Fotos:</strong>{" "}
                 {Object.values(areas).reduce(
                   (total, area) => total + area.photos.length,
-                  0
+                  0,
                 )}
               </div>
             </div>
           </div>
         )}
+      </div>
 
       <div className="flex justify-between">
-        <Button type="button" variant="outline" onClick={prev} disabled={step === 0}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={prev}
+          disabled={step === 0}
+        >
           <ChevronLeft className="mr-1 h-4 w-4" />
           Voltar
         </Button>
@@ -567,8 +619,4 @@ export function InspectionWizard() {
       </div>
     </div>
   );
-}
-
-function workshopIdFromProfile(profile: any) {
-  return profile?.workshop_id ?? "";
 }
