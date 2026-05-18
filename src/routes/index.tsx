@@ -48,7 +48,7 @@ function Landing() {
               <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Proteção jurídica para sua oficina
             </div>
             <h1 className="mt-6 font-display text-4xl font-bold leading-tight tracking-tight md:text-6xl">
-              Proteja sua oficina contra reclamações <span className="bg-gradient-hero bg-clip-text text-transparent">indevidas</span> sobre danos em veículos
+              Proteja sua oficina contra reclamações indevidas sobre danos em veículos
             </h1>
             <p className="mt-6 text-lg text-muted-foreground">
               Registre fotos, checklist, observações e assinatura digital do cliente antes de iniciar o serviço. Gere laudos profissionais e tenha provas organizadas em nuvem.
