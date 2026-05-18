@@ -142,17 +142,30 @@ export function InspectionWizard() {
       });
       if (sErr) throw sErr;
 
-      // Finalize
-      await supabase.from("inspections").update({ status: "finalized", finalized_at: new Date().toISOString() }).eq("id", insp.id);
+      const { error: finalizeErr } = await supabase
+        .from("inspections")
+        .update({
+          status: "finalized",
+          finalized_at: new Date().toISOString(),
+        })
+        .eq("id", insp.id);
 
-      // Create report record
-      await supabase.from("reports").insert({
-        inspection_id: insp.id, workshop_id: profile.workshop_id, unique_code: code,
+      if (finalizeErr) throw finalizeErr;
+
+      const { error: reportErr } = await supabase.from("reports").insert({
+        inspection_id: insp.id,
+        workshop_id: profile.workshop_id,
+        unique_code: code,
         public_url: `${window.location.origin}/laudo/${code}`,
       });
 
+      if (reportErr) throw reportErr;
+
       toast.success("Vistoria finalizada!");
-      navigate({ to: "/vistorias/$id", params: { id: insp.id } });
+
+      navigate({
+        to: "/vistorias",
+      });
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao finalizar");
     } finally {

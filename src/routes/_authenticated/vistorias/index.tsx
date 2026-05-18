@@ -20,8 +20,7 @@ function ListInspections() {
       let qb = supabase
         .from("inspections")
         .select(`id, unique_code, status, entry_datetime, service_type,
-                 vehicle:vehicles(plate, model, brand), client:clients(name),
-                 inspector:profiles!inspections_user_id_fkey(name)`)
+         vehicle:vehicles(plate, model, brand), client:clients(name)`)
         .order("created_at", { ascending: false });
       if (q) qb = qb.or(`unique_code.ilike.%${q}%`);
       const { data, error } = await qb;
