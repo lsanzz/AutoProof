@@ -114,28 +114,29 @@ export function ReportView({ inspection, signature, publicMode = false }: { insp
         )}
 
         <section>
-          <h2 className="mb-3 font-display text-lg font-semibold">Termo de ciência</h2>
-          <p className="rounded-lg bg-muted/50 p-3 text-sm">
-            Declaro estar ciente do estado do veículo no momento da entrada na oficina, conforme fotos, observações e checklist registrados nesta vistoria digital.
-          </p>
-          {signature && (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border bg-white p-3">
-                <img src={signature.signature_url} alt="Assinatura" className="h-24 w-full object-contain" />
-                <div className="mt-1 text-center text-sm font-medium">{signature.client_name}</div>
-                <div className="text-center text-xs text-muted-foreground">Assinado em {formatDateTime(signature.signed_at)}</div>
-              </div>
-              <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-                <div>Vistoriador: <strong className="text-foreground">{inspection.inspector?.name ?? "—"}</strong></div>
-                <div>Código único: <strong className="font-mono text-foreground">{inspection.unique_code}</strong></div>
-                <div>Status: <strong className="text-foreground">{inspection.status}</strong></div>
-              </div>
+          <h2 className="mb-3 font-display text-lg font-semibold">
+            Dados da vistoria
+          </h2>
+
+          <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+            <div>
+              Código único:{" "}
+              <strong className="font-mono text-foreground">
+                {inspection.unique_code}
+              </strong>
             </div>
-          )}
+
+            <div>
+              Status:{" "}
+              <strong className="text-foreground">
+                {inspection.status}
+              </strong>
+            </div>
+          </div>
         </section>
 
         <footer className="border-t pt-3 text-center text-[11px] text-muted-foreground">
-          Documento gerado por AutoProof — autoproof.app
+          Documento gerado por AutoProof — autoproof.vercel.app
         </footer>
       </article>
     </div>
