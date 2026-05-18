@@ -12,9 +12,8 @@ import { toast } from "sonner";
 import { generateInspectionCode, cn } from "@/lib/utils";
 import { SERVICE_TYPES, VEHICLE_AREAS } from "@/lib/inspection-areas";
 import { AreaInspector, type AreaState } from "./AreaInspector";
-import { SignaturePad } from "./SignaturePad";
 
-const STEPS = ["Cliente", "Veículo", "Serviço", "Vistoria", "Revisão", "Assinatura"];
+const STEPS = ["Cliente", "Veículo", "Serviço", "Vistoria", "Revisão"];
 
 export function InspectionWizard() {
   const { profile, user } = useAuth();
@@ -56,8 +55,6 @@ export function InspectionWizard() {
     return obj;
   });
 
-  const [signerName, setSignerName] = useState("");
-  const [signatureData, setSignatureData] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const clientResults = useQuery({
@@ -136,18 +133,6 @@ export function InspectionWizard() {
     if (!vehicleId && !newVehicle.plate.trim()) {
       toast.error("Informe ou selecione um veículo.");
       setStep(1);
-      return;
-    }
-
-    if (!signerName.trim()) {
-      toast.error("Informe o nome do cliente na assinatura.");
-      setStep(5);
-      return;
-    }
-
-    if (!signatureData) {
-      toast.error("Capture a assinatura do cliente.");
-      setStep(5);
       return;
     }
 
@@ -256,30 +241,6 @@ export function InspectionWizard() {
           if (damageErr) throw damageErr;
         }
       }
-
-      const sigBlob = await (await fetch(signatureData)).blob();
-      const sigPath = `${workshopId}/signatures/${insp.id}.png`;
-
-      const { error: uploadErr } = await supabase.storage
-        .from("autoproof")
-        .upload(sigPath, sigBlob, {
-          upsert: true,
-          contentType: "image/png",
-        });
-
-      if (uploadErr) throw uploadErr;
-
-      const { data: sigPub } = supabase.storage
-        .from("autoproof")
-        .getPublicUrl(sigPath);
-
-      const { error: signatureErr } = await supabase.from("signatures").insert({
-        inspection_id: insp.id,
-        client_name: signerName.trim(),
-        signature_url: sigPub.publicUrl,
-      });
-
-      if (signatureErr) throw signatureErr;
 
       const { error: finalizeErr } = await supabase
         .from("inspections")
@@ -576,34 +537,6 @@ export function InspectionWizard() {
             </div>
           </div>
         )}
-
-        {step === 5 && (
-          <div className="space-y-4">
-            <h2 className="font-display text-lg font-semibold">
-              Assinatura do cliente
-            </h2>
-
-            <div className="rounded-lg bg-muted/50 p-4 text-sm">
-              "Declaro estar ciente do estado do veículo no momento da entrada na
-              oficina, conforme fotos, observações e checklist registrados nesta
-              vistoria digital."
-            </div>
-
-            <div>
-              <Label>Nome do cliente</Label>
-              <Input
-                value={signerName}
-                onChange={(e) => setSignerName(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <Label>Assine abaixo</Label>
-              <SignaturePad onChange={setSignatureData} />
-            </div>
-          </div>
-        )}
-      </div>
 
       <div className="flex justify-between">
         <Button type="button" variant="outline" onClick={prev} disabled={step === 0}>
