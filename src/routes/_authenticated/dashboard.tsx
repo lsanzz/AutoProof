@@ -34,7 +34,7 @@ function DashboardPage() {
     queryKey: ["dashboard-stats", profile?.workshop_id],
     enabled: !!profile,
     queryFn: async () => {
-      const startMonth = new Date(); startMonth.setDate(1); startMonth.setHours(0,0,0,0);
+      const startMonth = new Date(); startMonth.setDate(1); startMonth.setHours(0, 0, 0, 0);
       const [insp, veh, cli, monthInsp] = await Promise.all([
         supabase.from("inspections").select("id", { count: "exact", head: true }),
         supabase.from("vehicles").select("id", { count: "exact", head: true }),
@@ -53,15 +53,27 @@ function DashboardPage() {
     queryFn: async () => {
       let qb = supabase
         .from("inspections")
-        .select(`id, unique_code, status, entry_datetime, service_type, created_at,
-                 vehicle:vehicles(plate, model, brand),
-                 client:clients(name),
-                 inspector:profiles!inspections_user_id_fkey(name)`)
+        .select(`
+        id,
+        unique_code,
+        status,
+        entry_datetime,
+        service_type,
+        created_at,
+        vehicle:vehicles(plate, model, brand),
+        client:clients(name)
+      `)
         .order("created_at", { ascending: false })
         .limit(10);
-      if (q) qb = qb.or(`unique_code.ilike.%${q}%`);
+
+      if (q) {
+        qb = qb.or(`unique_code.ilike.%${q}%`);
+      }
+
       const { data, error } = await qb;
+
       if (error) throw error;
+
       return data ?? [];
     },
   });
@@ -101,7 +113,7 @@ function DashboardPage() {
                 <th className="px-4 py-3">Código</th>
                 <th className="px-4 py-3">Veículo</th>
                 <th className="px-4 py-3">Cliente</th>
-                <th className="px-4 py-3 hidden md:table-cell">Responsável</th>
+                <th className="px-4 py-3 hidden md:table-cell">Serviço</th>
                 <th className="px-4 py-3 hidden md:table-cell">Data</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3"></th>
@@ -116,7 +128,7 @@ function DashboardPage() {
                     <div className="text-xs text-muted-foreground">{r.vehicle?.brand} {r.vehicle?.model}</div>
                   </td>
                   <td className="px-4 py-3">{r.client?.name}</td>
-                  <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">{r.inspector?.name ?? "—"}</td>
+                  <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">{r.service_type ?? "—"}</td>
                   <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">{formatDateTime(r.entry_datetime)}</td>
                   <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
                   <td className="px-4 py-3 text-right">
