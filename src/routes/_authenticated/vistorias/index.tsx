@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { formatDateTime } from "@/lib/utils";
 import { StatusBadge } from "@/components/StatusBadge";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/vistorias/")({
   component: ListInspections,
@@ -14,36 +15,131 @@ export const Route = createFileRoute("/_authenticated/vistorias/")({
 
 function ListInspections() {
   const [q, setQ] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const qc = useQueryClient();
+
   const list = useQuery({
     queryKey: ["inspections-list", q],
     queryFn: async () => {
       let qb = supabase
         .from("inspections")
-        .select(`id, unique_code, status, entry_datetime, service_type,
-         vehicle:vehicles(plate, model, brand), client:clients(name)`)
+        .select(`
+          id,
+          unique_code,
+          status,
+          entry_datetime,
+          service_type,
+          vehicle:vehicles(plate, model, brand),
+          client:clients(name)
+        `)
         .order("created_at", { ascending: false });
-      if (q) qb = qb.or(`unique_code.ilike.%${q}%`);
+
+      if (q) {
+        qb = qb.or(`unique_code.ilike.%${q}%`);
+      }
+
       const { data, error } = await qb;
+
       if (error) throw error;
+
       return data ?? [];
     },
   });
+
+  const deleteInspection = async (inspection: any) => {
+    const confirmed = window.confirm(
+      `Tem certeza que deseja apagar a vistoria ${inspection.unique_code}?\n\nEssa ação não pode ser desfeita.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingId(inspection.id);
+
+    try {
+      const { error: reportsErr } = await supabase
+        .from("reports")
+        .delete()
+        .eq("inspection_id", inspection.id);
+
+      if (reportsErr) throw reportsErr;
+
+      const { error: signaturesErr } = await supabase
+        .from("signatures")
+        .delete()
+        .eq("inspection_id", inspection.id);
+
+      if (signaturesErr) throw signaturesErr;
+
+      const { error: photosErr } = await supabase
+        .from("photos")
+        .delete()
+        .eq("inspection_id", inspection.id);
+
+      if (photosErr) throw photosErr;
+
+      const { error: damagesErr } = await supabase
+        .from("damages")
+        .delete()
+        .eq("inspection_id", inspection.id);
+
+      if (damagesErr) throw damagesErr;
+
+      const { error: areasErr } = await supabase
+        .from("inspection_areas")
+        .delete()
+        .eq("inspection_id", inspection.id);
+
+      if (areasErr) throw areasErr;
+
+      const { error: inspectionErr } = await supabase
+        .from("inspections")
+        .delete()
+        .eq("id", inspection.id);
+
+      if (inspectionErr) throw inspectionErr;
+
+      toast.success("Vistoria apagada com sucesso");
+
+      qc.invalidateQueries({ queryKey: ["inspections-list"] });
+      qc.invalidateQueries({ queryKey: ["recent-inspections"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    } catch (e: any) {
+      console.error("[delete inspection]", e);
+      toast.error(e?.message ?? "Erro ao apagar vistoria");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold">Vistorias</h1>
-          <p className="text-sm text-muted-foreground">Todas as vistorias realizadas</p>
+          <p className="text-sm text-muted-foreground">
+            Todas as vistorias realizadas
+          </p>
         </div>
+
         <Button asChild className="bg-gradient-hero">
-          <Link to="/vistorias/nova"><Plus className="mr-2 h-4 w-4" /> Nova vistoria</Link>
+          <Link to="/vistorias/nova">
+            <Plus className="mr-2 h-4 w-4" />
+            Nova vistoria
+          </Link>
         </Button>
       </div>
+
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Buscar por código..." value={q} onChange={(e) => setQ(e.target.value)} />
+
+        <Input
+          className="pl-9"
+          placeholder="Buscar por código..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
       </div>
+
       <div className="overflow-hidden rounded-xl border bg-card shadow-card">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
@@ -51,31 +147,73 @@ function ListInspections() {
               <th className="px-4 py-3">Código</th>
               <th className="px-4 py-3">Veículo</th>
               <th className="px-4 py-3">Cliente</th>
-              <th className="px-4 py-3 hidden md:table-cell">Serviço</th>
-              <th className="px-4 py-3 hidden md:table-cell">Data</th>
+              <th className="hidden px-4 py-3 md:table-cell">Serviço</th>
+              <th className="hidden px-4 py-3 md:table-cell">Data</th>
               <th className="px-4 py-3">Status</th>
-              <th></th>
+              <th className="px-4 py-3 text-right">Ações</th>
             </tr>
           </thead>
+
           <tbody>
             {(list.data ?? []).map((r: any) => (
               <tr key={r.id} className="border-t hover:bg-muted/30">
-                <td className="px-4 py-3 font-mono text-xs">{r.unique_code}</td>
+                <td className="px-4 py-3 font-mono text-xs">
+                  {r.unique_code}
+                </td>
+
                 <td className="px-4 py-3">
                   <div className="font-medium">{r.vehicle?.plate}</div>
-                  <div className="text-xs text-muted-foreground">{r.vehicle?.brand} {r.vehicle?.model}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {r.vehicle?.brand} {r.vehicle?.model}
+                  </div>
                 </td>
+
                 <td className="px-4 py-3">{r.client?.name}</td>
-                <td className="px-4 py-3 hidden md:table-cell">{r.service_type ?? "—"}</td>
-                <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">{formatDateTime(r.entry_datetime)}</td>
-                <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-                <td className="px-4 py-3 text-right">
-                  <Link to="/vistorias/$id" params={{ id: r.id }} className="text-sm text-primary hover:underline">Abrir</Link>
+
+                <td className="hidden px-4 py-3 md:table-cell">
+                  {r.service_type ?? "—"}
+                </td>
+
+                <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
+                  {formatDateTime(r.entry_datetime)}
+                </td>
+
+                <td className="px-4 py-3">
+                  <StatusBadge status={r.status} />
+                </td>
+
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-2">
+                    <Button asChild size="sm" variant="outline">
+                      <Link to="/vistorias/$id" params={{ id: r.id }}>
+                        Abrir
+                      </Link>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      disabled={deletingId === r.id}
+                      onClick={() => deleteInspection(r)}
+                    >
+                      <Trash2 className="mr-1 h-3.5 w-3.5" />
+                      {deletingId === r.id ? "Apagando..." : "Apagar"}
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
+
             {list.data?.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">Nenhuma vistoria ainda.</td></tr>
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-4 py-12 text-center text-sm text-muted-foreground"
+                >
+                  Nenhuma vistoria ainda.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
