@@ -1,21 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
-import { Search, Car } from "lucide-react";
-import { useState } from "react";
-
-export const Route = createFileRoute("/_authenticated/veiculos")({
-  component: VehiclesPage,
-});
-
-function VehiclesPage() {
-  const [q, setQ] = useState("");
-  const list = useQuery({
-    queryKey: ["vehicles", q],
-    queryFn: async () => {
-      let qb = supabase.from("vehicles").select(`*, client:clients(name)`).order("created_at", { ascending: false });
-      if (q) qb = qb.or(`plaimport { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -64,17 +47,19 @@ function VehiclesPage() {
   const list = useQuery({
     queryKey: ["vehicles", q],
     queryFn: async () => {
-      let qb = supabase
+      let query = supabase
         .from("vehicles")
-        .select(`*, client:clients(name)`)
+        .select("*, client:clients(name)")
         .order("created_at", { ascending: false });
 
       if (q) {
-        qb = qb.or(`plate.ilike.%${q}%,model.ilike.%${q}%,brand.ilike.%${q}%`);
+        query = query.or(`plate.ilike.%${q}%,model.ilike.%${q}%,brand.ilike.%${q}%`);
       }
 
-      const { data, error } = await qb;
+      const { data, error } = await query;
+
       if (error) throw error;
+
       return data ?? [];
     },
   });
@@ -146,18 +131,23 @@ function VehiclesPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {(list.data ?? []).map((v: any) => (
-          <div key={v.id} className="rounded-xl border bg-card p-4 shadow-card">
+        {(list.data ?? []).map((vehicle: any) => (
+          <div
+            key={vehicle.id}
+            className="rounded-xl border bg-card p-4 shadow-card"
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="font-mono text-sm font-bold uppercase">
-                  {v.plate}
+                  {vehicle.plate}
                 </div>
+
                 <div className="font-semibold">
-                  {v.brand} {v.model}
+                  {vehicle.brand} {vehicle.model}
                 </div>
+
                 <div className="text-xs text-muted-foreground">
-                  {v.year || "—"} • {v.color || "—"}
+                  {vehicle.year || "—"} • {vehicle.color || "—"}
                 </div>
               </div>
 
@@ -170,7 +160,7 @@ function VehiclesPage() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => openEdit(v)}
+                  onClick={() => openEdit(vehicle)}
                 >
                   <Pencil className="mr-1 h-3.5 w-3.5" />
                   Editar
@@ -178,20 +168,20 @@ function VehiclesPage() {
               </div>
             </div>
 
-            {v.mileage && (
+            {vehicle.mileage && (
               <div className="mt-2 text-xs text-muted-foreground">
                 Quilometragem:{" "}
                 <span className="font-medium text-foreground">
-                  {v.mileage} km
+                  {vehicle.mileage} km
                 </span>
               </div>
             )}
 
-            {v.client?.name && (
+            {vehicle.client?.name && (
               <div className="mt-3 text-xs text-muted-foreground">
                 Cliente:{" "}
                 <span className="font-medium text-foreground">
-                  {v.client.name}
+                  {vehicle.client.name}
                 </span>
               </div>
             )}
@@ -283,45 +273,6 @@ function VehiclesPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}te.ilike.%${q}%,model.ilike.%${q}%,brand.ilike.%${q}%`);
-      const { data, error } = await qb;
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold">Veículos</h1>
-        <p className="text-sm text-muted-foreground">Veículos cadastrados nas vistorias</p>
-      </div>
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Buscar por placa, modelo..." value={q} onChange={(e) => setQ(e.target.value)} />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {(list.data ?? []).map((v: any) => (
-          <div key={v.id} className="rounded-xl border bg-card p-4 shadow-card">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="font-mono text-sm font-bold uppercase">{v.plate}</div>
-                <div className="font-semibold">{v.brand} {v.model}</div>
-                <div className="text-xs text-muted-foreground">{v.year} • {v.color}</div>
-              </div>
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><Car className="h-4 w-4" /></div>
-            </div>
-            {v.client?.name && <div className="mt-3 text-xs text-muted-foreground">Cliente: <span className="font-medium text-foreground">{v.client.name}</span></div>}
-          </div>
-        ))}
-        {list.data?.length === 0 && (
-          <div className="col-span-full rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">
-            Nenhum veículo cadastrado ainda. Cadastre durante uma nova vistoria.
-          </div>
-        )}
-      </div>
     </div>
   );
 }
