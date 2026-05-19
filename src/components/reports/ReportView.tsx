@@ -175,6 +175,33 @@ export function ReportView({
           )}
         </section>
 
+        {areas.some((area) => area.notes && String(area.notes).trim()) && (
+          <section>
+            <h2 className="mb-3 font-display text-lg font-semibold">
+              Observações por peça
+            </h2>
+
+            <div className="space-y-2">
+              {areas
+                .filter((area) => area.notes && String(area.notes).trim())
+                .map((area) => (
+                  <div
+                    key={area.id}
+                    className="rounded-lg border bg-muted/30 p-3 text-sm"
+                  >
+                    <div className="font-medium">
+                      {area.area_name ?? "Área não identificada"}
+                    </div>
+
+                    <div className="mt-1 whitespace-pre-wrap text-muted-foreground">
+                      {area.notes}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </section>
+        )}
+
         {photos.length > 0 && (
           <section>
             <h2 className="mb-3 font-display text-lg font-semibold">
