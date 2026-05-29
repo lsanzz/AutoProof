@@ -49,17 +49,21 @@ function ClientsPage() {
   const list = useQuery({
     queryKey: ["clients", q],
     queryFn: async () => {
-      let qb = supabase
+      let query = supabase
         .from("clients")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (q) {
-        qb = qb.or(`name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`);
+        query = query.or(
+          `name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`,
+        );
       }
 
-      const { data, error } = await qb;
+      const { data, error } = await query;
+
       if (error) throw error;
+
       return data ?? [];
     },
   });
@@ -103,34 +107,16 @@ function ClientsPage() {
       notes: form.notes || null,
     };
 
-    const deleteClient = async (client: any) => {
-  const confirmed = window.confirm(
-    `Tem certeza que deseja apagar o cliente ${client.name}?\n\nSe ele tiver vistorias vinculadas, o Supabase pode bloquear a exclusão.`
-  );
-
-  if (!confirmed) return;
-
-  const { error } = await supabase
-    .from("clients")
-    .delete()
-    .eq("id", client.id);
-
-  if (error) {
-    toast.error(error.message);
-    return;
-  }
-
-  toast.success("Cliente apagado");
-  qc.invalidateQueries({ queryKey: ["clients"] });
-};
-
     if (editingClient) {
       const { error } = await supabase
         .from("clients")
         .update(payload)
         .eq("id", editingClient.id);
 
-      if (error) return toast.error(error.message);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
 
       toast.success("Cliente atualizado");
     } else {
@@ -139,7 +125,10 @@ function ClientsPage() {
         workshop_id: profile.workshop_id,
       });
 
-      if (error) return toast.error(error.message);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
 
       toast.success("Cliente cadastrado");
     }
@@ -149,6 +138,29 @@ function ClientsPage() {
     setOpen(false);
     qc.invalidateQueries({ queryKey: ["clients"] });
   };
+
+  const deleteClient = async (client: any) => {
+    const confirmed = window.confirm(
+      `Tem certeza que deseja apagar o cliente ${client.name}?\n\nSe ele tiver vistorias vinculadas, o Supabase pode bloquear a exclusão. Primeiro apague as vistorias vinculadas.`,
+    );
+
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("clients")
+      .delete()
+      .eq("id", client.id);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Cliente apagado");
+    qc.invalidateQueries({ queryKey: ["clients"] });
+  };
+
+  const clients = list.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -236,6 +248,7 @@ function ClientsPage() {
 
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
         <Input
           className="pl-9"
           placeholder="Buscar cliente..."
@@ -244,53 +257,71 @@ function ClientsPage() {
         />
       </div>
 
-<div className="flex gap-2">
-  <Button
-    type="button"
-    size="sm"
-    variant="outline"
-    onClick={() => openEdit(c)}
-  >
-    <Pencil className="mr-1 h-3.5 w-3.5" />
-    Editar
-  </Button>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {clients.map((client: any) => (
+          <div
+            key={client.id}
+            className="rounded-xl border bg-card p-4 shadow-card"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="font-semibold">{client.name}</div>
 
-  <Button
-    type="button"
-    size="sm"
-    variant="destructive"
-    onClick={() => deleteClient(c)}
-  >
-    <Trash2 className="mr-1 h-3.5 w-3.5" />
-    Apagar
-  </Button>
-</div>
+                {client.document_number && (
+                  <div className="text-xs text-muted-foreground">
+                    {client.document_number}
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-              {c.phone && (
+              {client.phone && (
                 <div className="flex items-center gap-2">
                   <Phone className="h-3.5 w-3.5" />
-                  {c.phone}
+                  {client.phone}
                 </div>
               )}
 
-              {c.email && (
+              {client.email && (
                 <div className="flex items-center gap-2">
                   <Mail className="h-3.5 w-3.5" />
-                  {c.email}
+                  {client.email}
                 </div>
               )}
             </div>
 
-            {c.notes && (
+            {client.notes && (
               <div className="mt-3 rounded-lg bg-muted/50 p-2 text-xs text-muted-foreground">
-                {c.notes}
+                {client.notes}
               </div>
             )}
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => openEdit(client)}
+              >
+                <Pencil className="mr-1 h-3.5 w-3.5" />
+                Editar
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                variant="destructive"
+                onClick={() => deleteClient(client)}
+              >
+                <Trash2 className="mr-1 h-3.5 w-3.5" />
+                Apagar
+              </Button>
+            </div>
           </div>
         ))}
 
-        {list.data?.length === 0 && (
+        {clients.length === 0 && (
           <div className="col-span-full rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">
             Nenhum cliente cadastrado ainda.
           </div>
