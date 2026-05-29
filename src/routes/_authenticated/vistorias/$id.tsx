@@ -7,8 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ExternalLink, Pencil, Save, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ExternalLink,
+  Pencil,
+  Save,
+  X,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
+import { DAMAGE_TYPES, VEHICLE_AREAS } from "@/lib/inspection-areas";
 
 export const Route = createFileRoute("/_authenticated/vistorias/$id")({
   component: InspectionDetail,
@@ -36,6 +51,15 @@ function InspectionDetail() {
   });
 
   const [areaNotes, setAreaNotes] = useState<Record<string, string>>({});
+
+  const [newDamage, setNewDamage] = useState({
+    area_name: "",
+    damage_type: "",
+    description: "",
+  });
+
+  const [addingDamage, setAddingDamage] = useState(false);
+  const [deletingDamageId, setDeletingDamageId] = useState<string | null>(null);
 
   const q = useQuery({
     queryKey: ["inspection", id],
@@ -144,14 +168,26 @@ function InspectionDetail() {
     });
 
     const notes: Record<string, string> = {};
+
     for (const area of q.data.areas ?? []) {
       notes[area.id] = area.notes ?? "";
     }
+
     setAreaNotes(notes);
   }, [q.data]);
 
   const saveChanges = async () => {
     if (!q.data) return;
+
+    if (!form.client_name.trim()) {
+      toast.error("Informe o nome do cliente.");
+      return;
+    }
+
+    if (!form.vehicle_plate.trim()) {
+      toast.error("Informe a placa do veículo.");
+      return;
+    }
 
     setSaving(true);
 
@@ -204,14 +240,122 @@ function InspectionDetail() {
 
       toast.success("Vistoria atualizada");
       setEditing(false);
+
       qc.invalidateQueries({ queryKey: ["inspection", id] });
       qc.invalidateQueries({ queryKey: ["inspections-list"] });
       qc.invalidateQueries({ queryKey: ["recent-inspections"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
     } catch (e: any) {
       console.error("[edit inspection]", e);
       toast.error(e?.message ?? "Erro ao atualizar vistoria");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const addDamage = async () => {
+    if (!q.data) return;
+
+    if (!newDamage.area_name) {
+      toast.error("Selecione a peça/área do veículo.");
+      return;
+    }
+
+    if (!newDamage.damage_type) {
+      toast.error("Selecione o tipo de dano.");
+      return;
+    }
+
+    setAddingDamage(true);
+
+    try {
+      let area = (q.data.areas ?? []).find(
+        (item: any) => item.area_name === newDamage.area_name,
+      );
+
+      if (!area) {
+        const { data: createdArea, error: areaErr } = await supabase
+          .from("inspection_areas")
+          .insert({
+            inspection_id: q.data.id,
+            area_name: newDamage.area_name,
+            has_damage: true,
+            notes: null,
+          })
+          .select()
+          .single();
+
+        if (areaErr) throw areaErr;
+
+        area = createdArea;
+      } else {
+        const { error: updateAreaErr } = await supabase
+          .from("inspection_areas")
+          .update({
+            has_damage: true,
+          })
+          .eq("id", area.id);
+
+        if (updateAreaErr) throw updateAreaErr;
+      }
+
+      const { error: damageErr } = await supabase.from("damages").insert({
+        inspection_id: q.data.id,
+        inspection_area_id: area.id,
+        damage_type: newDamage.damage_type as any,
+        description: newDamage.description || null,
+      });
+
+      if (damageErr) throw damageErr;
+
+      toast.success("Dano adicionado à vistoria");
+
+      setNewDamage({
+        area_name: "",
+        damage_type: "",
+        description: "",
+      });
+
+      qc.invalidateQueries({ queryKey: ["inspection", id] });
+      qc.invalidateQueries({ queryKey: ["inspections-list"] });
+      qc.invalidateQueries({ queryKey: ["recent-inspections"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    } catch (e: any) {
+      console.error("[add damage]", e);
+      toast.error(e?.message ?? "Erro ao adicionar dano");
+    } finally {
+      setAddingDamage(false);
+    }
+  };
+
+  const deleteDamage = async (damage: any) => {
+    const confirmed = window.confirm(
+      "Tem certeza que deseja apagar este dano da vistoria?",
+    );
+
+    if (!confirmed) return;
+
+    setDeletingDamageId(damage.id);
+
+    try {
+      const { error } = await supabase
+        .from("damages")
+        .delete()
+        .eq("id", damage.id);
+
+      if (error) throw error;
+
+      toast.success("Dano removido da vistoria");
+
+      qc.invalidateQueries({ queryKey: ["inspection", id] });
+      qc.invalidateQueries({ queryKey: ["inspections-list"] });
+      qc.invalidateQueries({ queryKey: ["recent-inspections"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    } catch (e: any) {
+      console.error("[delete damage]", e);
+      toast.error(e?.message ?? "Erro ao apagar dano");
+    } finally {
+      setDeletingDamageId(null);
     }
   };
 
@@ -225,6 +369,7 @@ function InspectionDetail() {
         <h1 className="font-display text-xl font-bold text-destructive">
           Erro ao carregar vistoria
         </h1>
+
         <p className="mt-2 text-sm text-muted-foreground">
           {(q.error as Error)?.message ?? "Erro desconhecido"}
         </p>
@@ -244,6 +389,7 @@ function InspectionDetail() {
         <h1 className="font-display text-xl font-bold">
           Vistoria não encontrada
         </h1>
+
         <p className="mt-2 text-sm text-muted-foreground">
           A vistoria com ID <span className="font-mono">{id}</span> não foi
           encontrada ou seu usuário não tem permissão para visualizá-la.
@@ -269,6 +415,7 @@ function InspectionDetail() {
           <div className="font-mono text-xs text-muted-foreground">
             {q.data.unique_code}
           </div>
+
           <h1 className="font-display text-2xl font-bold">
             Detalhes da vistoria
           </h1>
@@ -289,13 +436,18 @@ function InspectionDetail() {
           )}
 
           {!editing ? (
-            <Button onClick={() => setEditing(true)} className="bg-gradient-hero">
+            <Button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="bg-gradient-hero"
+            >
               <Pencil className="mr-2 h-4 w-4" />
               Editar vistoria
             </Button>
           ) : (
             <>
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => setEditing(false)}
                 disabled={saving}
@@ -305,6 +457,7 @@ function InspectionDetail() {
               </Button>
 
               <Button
+                type="button"
                 onClick={saveChanges}
                 disabled={saving}
                 className="bg-gradient-hero"
@@ -468,6 +621,7 @@ function InspectionDetail() {
               {(q.data.areas ?? []).map((area: any) => (
                 <div key={area.id} className="rounded-lg border p-3">
                   <Label>{area.area_name}</Label>
+
                   <Textarea
                     value={areaNotes[area.id] ?? ""}
                     onChange={(e) =>
@@ -480,6 +634,150 @@ function InspectionDetail() {
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display text-lg font-semibold">
+              Adicionar dano esquecido
+            </h2>
+
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <div className="grid gap-3 md:grid-cols-3">
+                <div>
+                  <Label>Peça/área</Label>
+
+                  <Select
+                    value={newDamage.area_name}
+                    onValueChange={(value) =>
+                      setNewDamage({ ...newDamage, area_name: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      {VEHICLE_AREAS.map((area) => (
+                        <SelectItem key={area} value={area}>
+                          {area}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Tipo de dano</Label>
+
+                  <Select
+                    value={newDamage.damage_type}
+                    onValueChange={(value) =>
+                      setNewDamage({ ...newDamage, damage_type: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      {DAMAGE_TYPES.map((damage) => (
+                        <SelectItem key={damage.value} value={damage.value}>
+                          {damage.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    onClick={addDamage}
+                    disabled={addingDamage}
+                    className="w-full bg-gradient-hero"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {addingDamage ? "Adicionando..." : "Adicionar dano"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <Label>Descrição/observação do dano</Label>
+
+                <Textarea
+                  value={newDamage.description}
+                  onChange={(e) =>
+                    setNewDamage({
+                      ...newDamage,
+                      description: e.target.value,
+                    })
+                  }
+                  placeholder="Ex: risco profundo no para-choque dianteiro, lado esquerdo"
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-display text-lg font-semibold">
+              Danos registrados
+            </h2>
+
+            {(q.data.damages ?? []).length === 0 ? (
+              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                Nenhum dano registrado nesta vistoria.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {(q.data.damages ?? []).map((damage: any) => {
+                  const area = (q.data.areas ?? []).find(
+                    (item: any) => item.id === damage.inspection_area_id,
+                  );
+
+                  const damageLabel =
+                    DAMAGE_TYPES.find(
+                      (item) => item.value === damage.damage_type,
+                    )?.label ?? damage.damage_type;
+
+                  return (
+                    <div
+                      key={damage.id}
+                      className="flex flex-wrap items-start justify-between gap-3 rounded-lg border p-3"
+                    >
+                      <div>
+                        <div className="font-medium">
+                          {area?.area_name ?? "Área não identificada"}
+                        </div>
+
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          {damageLabel}
+                        </div>
+
+                        {damage.description && (
+                          <div className="mt-1 text-sm text-muted-foreground">
+                            {damage.description}
+                          </div>
+                        )}
+                      </div>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        disabled={deletingDamageId === damage.id}
+                        onClick={() => deleteDamage(damage)}
+                      >
+                        <Trash2 className="mr-1 h-3.5 w-3.5" />
+                        {deletingDamageId === damage.id
+                          ? "Apagando..."
+                          : "Apagar"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
         </div>
       ) : (
