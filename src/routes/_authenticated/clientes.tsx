@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Search, Phone, Mail, Pencil } from "lucide-react";
+import { Plus, Search, Phone, Mail, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
@@ -102,6 +102,27 @@ function ClientsPage() {
       document_number: form.document_number || null,
       notes: form.notes || null,
     };
+
+    const deleteClient = async (client: any) => {
+  const confirmed = window.confirm(
+    `Tem certeza que deseja apagar o cliente ${client.name}?\n\nSe ele tiver vistorias vinculadas, o Supabase pode bloquear a exclusão.`
+  );
+
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from("clients")
+    .delete()
+    .eq("id", client.id);
+
+  if (error) {
+    toast.error(error.message);
+    return;
+  }
+
+  toast.success("Cliente apagado");
+  qc.invalidateQueries({ queryKey: ["clients"] });
+};
 
     if (editingClient) {
       const { error } = await supabase
@@ -223,29 +244,27 @@ function ClientsPage() {
         />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {(list.data ?? []).map((c: any) => (
-          <div key={c.id} className="rounded-xl border bg-card p-4 shadow-card">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="font-semibold">{c.name}</div>
-                {c.document_number && (
-                  <div className="text-xs text-muted-foreground">
-                    {c.document_number}
-                  </div>
-                )}
-              </div>
+<div className="flex gap-2">
+  <Button
+    type="button"
+    size="sm"
+    variant="outline"
+    onClick={() => openEdit(c)}
+  >
+    <Pencil className="mr-1 h-3.5 w-3.5" />
+    Editar
+  </Button>
 
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => openEdit(c)}
-              >
-                <Pencil className="mr-1 h-3.5 w-3.5" />
-                Editar
-              </Button>
-            </div>
+  <Button
+    type="button"
+    size="sm"
+    variant="destructive"
+    onClick={() => deleteClient(c)}
+  >
+    <Trash2 className="mr-1 h-3.5 w-3.5" />
+    Apagar
+  </Button>
+</div>
 
             <div className="mt-3 space-y-1 text-sm text-muted-foreground">
               {c.phone && (

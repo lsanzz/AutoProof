@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Car, Pencil } from "lucide-react";
+import { Search, Car, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -99,6 +99,27 @@ function VehiclesPage() {
       })
       .eq("id", editingVehicle.id);
 
+      const deleteVehicle = async (vehicle: any) => {
+  const confirmed = window.confirm(
+    `Tem certeza que deseja apagar o veículo ${vehicle.plate}?\n\nSe ele tiver vistorias vinculadas, o Supabase pode bloquear a exclusão.`
+  );
+
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from("vehicles")
+    .delete()
+    .eq("id", vehicle.id);
+
+  if (error) {
+    toast.error(error.message);
+    return;
+  }
+
+  toast.success("Veículo apagado");
+  qc.invalidateQueries({ queryKey: ["vehicles"] });
+};
+
     if (error) {
       toast.error(error.message);
       return;
@@ -151,22 +172,31 @@ function VehiclesPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Car className="h-4 w-4" />
-                </div>
+<div className="flex items-center gap-2">
+  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+    <Car className="h-4 w-4" />
+  </div>
 
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => openEdit(vehicle)}
-                >
-                  <Pencil className="mr-1 h-3.5 w-3.5" />
-                  Editar
-                </Button>
-              </div>
-            </div>
+  <Button
+    type="button"
+    size="sm"
+    variant="outline"
+    onClick={() => openEdit(vehicle)}
+  >
+    <Pencil className="mr-1 h-3.5 w-3.5" />
+    Editar
+  </Button>
+
+  <Button
+    type="button"
+    size="sm"
+    variant="destructive"
+    onClick={() => deleteVehicle(vehicle)}
+  >
+    <Trash2 className="mr-1 h-3.5 w-3.5" />
+    Apagar
+  </Button>
+</div>
 
             {vehicle.mileage && (
               <div className="mt-2 text-xs text-muted-foreground">
