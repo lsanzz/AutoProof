@@ -53,7 +53,9 @@ function VehiclesPage() {
         .order("created_at", { ascending: false });
 
       if (q) {
-        query = query.or(`plate.ilike.%${q}%,model.ilike.%${q}%,brand.ilike.%${q}%`);
+        query = query.or(
+          `plate.ilike.%${q}%,model.ilike.%${q}%,brand.ilike.%${q}%`,
+        );
       }
 
       const { data, error } = await query;
@@ -99,27 +101,6 @@ function VehiclesPage() {
       })
       .eq("id", editingVehicle.id);
 
-      const deleteVehicle = async (vehicle: any) => {
-  const confirmed = window.confirm(
-    `Tem certeza que deseja apagar o veículo ${vehicle.plate}?\n\nSe ele tiver vistorias vinculadas, o Supabase pode bloquear a exclusão.`
-  );
-
-  if (!confirmed) return;
-
-  const { error } = await supabase
-    .from("vehicles")
-    .delete()
-    .eq("id", vehicle.id);
-
-  if (error) {
-    toast.error(error.message);
-    return;
-  }
-
-  toast.success("Veículo apagado");
-  qc.invalidateQueries({ queryKey: ["vehicles"] });
-};
-
     if (error) {
       toast.error(error.message);
       return;
@@ -129,6 +110,27 @@ function VehiclesPage() {
     setOpen(false);
     setEditingVehicle(null);
     setForm(emptyVehicleForm);
+    qc.invalidateQueries({ queryKey: ["vehicles"] });
+  };
+
+  const deleteVehicle = async (vehicle: any) => {
+    const confirmed = window.confirm(
+      `Tem certeza que deseja apagar o veículo ${vehicle.plate}?\n\nSe ele tiver vistorias vinculadas, o Supabase pode bloquear a exclusão.`,
+    );
+
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("vehicles")
+      .delete()
+      .eq("id", vehicle.id);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Veículo apagado");
     qc.invalidateQueries({ queryKey: ["vehicles"] });
   };
 
@@ -172,31 +174,10 @@ function VehiclesPage() {
                 </div>
               </div>
 
-<div className="flex items-center gap-2">
-  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-    <Car className="h-4 w-4" />
-  </div>
-
-  <Button
-    type="button"
-    size="sm"
-    variant="outline"
-    onClick={() => openEdit(vehicle)}
-  >
-    <Pencil className="mr-1 h-3.5 w-3.5" />
-    Editar
-  </Button>
-
-  <Button
-    type="button"
-    size="sm"
-    variant="destructive"
-    onClick={() => deleteVehicle(vehicle)}
-  >
-    <Trash2 className="mr-1 h-3.5 w-3.5" />
-    Apagar
-  </Button>
-</div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Car className="h-4 w-4" />
+              </div>
+            </div>
 
             {vehicle.mileage && (
               <div className="mt-2 text-xs text-muted-foreground">
@@ -215,6 +196,28 @@ function VehiclesPage() {
                 </span>
               </div>
             )}
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => openEdit(vehicle)}
+              >
+                <Pencil className="mr-1 h-3.5 w-3.5" />
+                Editar
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                variant="destructive"
+                onClick={() => deleteVehicle(vehicle)}
+              >
+                <Trash2 className="mr-1 h-3.5 w-3.5" />
+                Apagar
+              </Button>
+            </div>
           </div>
         ))}
 
